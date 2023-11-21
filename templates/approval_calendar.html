@@ -1,0 +1,325 @@
+{% set highlight = "approval" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<html>
+<head>
+	<title>Calendar Example</title>
+	<style>
+		.calendar {
+			width: 600px;
+			margin: 0 auto;
+			background-color: #f2f2f2;
+			border-radius: 10px;
+			padding: 20px;
+			font-family: Arial, sans-serif;
+		}
+
+		.calendar h1 {
+			text-align: center;
+			margin-bottom: 30px;
+			color: #444444;
+			font-size: 36px;
+			font-weight: bold;
+		}
+
+		.calendar table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-bottom: 30px;
+			table-layout: fixed;
+		}
+
+		.calendar table th,
+		.calendar table td {
+			text-align: center;
+			padding: 10px;
+		}
+
+		.calendar table th {
+			color: #ffffff;
+			background-color: #444444;
+			font-weight: bold;
+		}
+
+		.calendar table td {
+			height: 80px;
+			color: #444444;
+			border: 1px solid #dddddd;
+			cursor: pointer;
+			transition: background-color 0.3s;
+		}
+
+		.calendar table td:hover {
+			background-color: #dddddd;
+		}
+
+		.calendar table td.active {
+			background-color: #cc0000;
+			color: #ffffff;
+		}
+
+		.btn-outline-info {
+             border-color: #FFD700;
+             color: #FFD700;
+        }
+
+        .btn-outline-info:hover{
+        color:black;
+        background-color:#FFD700;
+        border-color:#FFD700
+        }
+
+        .hidden{
+        	display: none;
+        }
+
+	</style>
+</head>
+<br>
+<body>
+	<div class="calendar">
+		<h1 id="year_month_title"></h1>
+		<h2 id="approved_hours"></h2>
+		<script>
+			let tableTitle = document.getElementById("year_month_title");
+			yearString = "{{ year }}";
+			numToMonthTextDict = [
+			"January",
+			"February",
+			"March",
+			"April",
+			"May",
+			"June",
+			"July",
+			"August",
+			"September",
+			"October",
+			"November",
+			"December"
+			];
+			monthString = numToMonthTextDict[{{ month }} - 1]
+			tableTitle.textContent = monthString + ' ' + yearString;
+		</script>
+		<table>
+			<thead>
+				<tr>
+					<th>Sun</th>
+					<th>Mon</th>
+					<th>Tue</th>
+					<th>Wed</th>
+					<th>Thu</th>
+					<th>Fri</th>
+					<th>Sat</th>
+				</tr>
+			</thead>
+			<tbody id="calendar_body">
+			</tbody>
+		</table>
+
+		<div class="button-container">
+			<a><button class="left-button prev_month">Previous Month</button></a>
+			<a><button class="right-button next_month">Next Month</button></a>
+
+		</div>
+
+		<form id="hidden_form" method="POST" action="">
+		{{ form.selected_date(id="date_selection", class="hidden") }}
+		{{ form.submit(id="submit", class="hidden") }}
+		{{ form.approval(id="to_approval") }}
+		</form>
+
+		<style>
+		#to_approval {
+			position: absolute;
+
+		  	left: 50%;
+		  	transform: translateX(-50%);
+		  	font-size: 16px; /* Change the font size as needed */
+		  	margin-top: -27px
+		}
+
+		h2 {
+			font-size: 20px
+		}
+
+		.button-container {
+			display: flex;
+		  	justify-content: space-between;
+		}
+
+		.left-button {
+		  	justify-self: flex-start;
+		}
+
+		.right-button {
+		  	justify-self: flex-end;
+		}
+
+		td {
+			position: relative;
+		}
+
+		.cell_center{
+		}
+
+		.cell_bottom_right{
+			position: absolute;
+		  	bottom: 0;
+		  	right: 0;
+		  	font-size: 12px; /* Change the font size as needed */
+		}
+
+		.cell_top_right{
+			position: absolute;
+		  	top: 0;
+		  	right: 0;
+		  	font-size: 12px; /* Change the font size as needed */
+		}
+
+		.cell_bottom_left{
+			position: absolute;
+		  	bottom: 0;
+		  	left: 0;
+		  	font-size: 12px; /* Change the font size as needed */
+		}
+		</style>
+	</div>
+</body>
+
+	<script>
+
+		function convertToTwoDigitString(num) {
+		  // Use a conditional (ternary) operator to add a leading '0' if needed
+		  return num < 10 ? '0' + num : num.toString();
+		}
+
+		let table = document.getElementById("calendar_body");
+		var myColors = {{ colors|safe }};
+		var myTotalHours = {{ total_hours|safe }};
+		var myStatus = {{ statuses|safe }}
+		var myDays = {{ days }};
+		const formBody = document.querySelector('#hidden_form')
+		const selectedDateHolder = document.querySelector('#date_selection')
+		const submitButton = document.querySelector('#submit')
+		for (let i = 0; i < myDays.length; i++)
+		{
+			let row = document.createElement("tr");
+			for (let j = 0; j < myDays[i].length; j++)
+			{
+				let cell = document.createElement("td");
+				//cell.textContent = myDays[i][j];
+				var myYear = {{ year }};
+				var yearString = String(myYear);
+				var myMonth = {{ month }};
+				var monthString = convertToTwoDigitString(myMonth)
+				cell.setAttribute("data-day", myDays[i][j]);
+				var dayString = convertToTwoDigitString(myDays[i][j])
+
+				var dateString = yearString + '-' + monthString + '-' + dayString;
+
+				cell.style.backgroundColor = myColors[i][j];
+				const span1 = document.createElement('span');
+				span1.classList.add('cell_center');
+				span1.textContent = myDays[i][j];
+				cell.appendChild(span1);
+				const span2 = document.createElement('span');
+				span2.classList.add('cell_bottom_right');
+				span2.textContent = myTotalHours[i][j];
+				cell.appendChild(span2);
+				const span3 = document.createElement('span');
+				span3.classList.add('cell_top_right');
+				span3.textContent = myStatus[i][j];
+				cell.appendChild(span3);
+
+				if (myColors[i][j] != 'grey') {
+					const check_box = document.createElement('input');
+					check_box.type = 'checkbox';
+
+					if (selectedDateHolder.value.includes(dateString)) {
+						check_box.checked = true;
+					}
+
+					check_box.classList.add('cell_bottom_left');
+					check_box.classList.add('checkbox');
+					cell.appendChild(check_box);
+				}
+				row.appendChild(cell);
+			}
+			table.appendChild(row);
+		}
+
+		document.addEventListener("DOMContentLoaded", function(event) {
+
+			approved_hours = document.querySelector('#approved_hours')
+			approved_hours.textContent = "Approved hours : {{ accumulated_approved_hours }}"
+			var whiteCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: white;']");
+			var yellowCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: yellow;']");
+			var redCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: red;']");
+			var orangeCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: orange;']");
+			var greenCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: green;']");
+			calendarCells = [...whiteCells, ...yellowCells, ...redCells, ...orangeCells, ...greenCells];
+			//var calendarCells = document.querySelectorAll("#calendar_body > tr > td[style='background-color: white;']");
+			console.log('calendar cells created for approval calendar');
+			calendarCells.forEach(function(cell) {
+				cell.addEventListener("click", function() {
+					var myDay = this.getAttribute("data-day");
+					var myYear = {{ year }};
+					var yearString = String(myYear);
+					var myMonth = {{ month }};
+					var monthString = convertToTwoDigitString(myMonth)
+					var dayString = convertToTwoDigitString(myDay)
+					var dateString = yearString + '-' + monthString + '-' + dayString;
+
+					var currentCheckBox = this.closest('td').querySelector('.checkbox')
+
+					if (currentCheckBox.checked) {
+						currentCheckBox.checked = false;
+						selectedDateHolder.value = selectedDateHolder.value.replace(',' + dateString, "");
+					} else {
+						currentCheckBox.checked = true;
+						selectedDateHolder.value = selectedDateHolder.value + ',' + dateString;
+					}
+
+
+
+					console.log('going to time sheet summary')
+					var url = "{{ url_for('time_sheet_summary') }}?year=" + encodeURIComponent(myYear) + "&month="+encodeURIComponent(myMonth) + "&day="+encodeURIComponent(myDay);
+					//window.location.href = url;
+					//formBody.setAttribute("action", url);
+					//submitButton.click();
+				});
+			});
+		});
+
+		let prevMnthBtn = document.querySelector('.prev_month')
+		prevMnthBtn.addEventListener("click", function() {
+		var myMonth = {{ month }} - 1;
+		var myYear = {{ year }};
+		if (myMonth <= 0){
+		myMonth = 12
+		myYear = myYear - 1
+		};
+		var url = "{{ url_for('approval_calendar') }}?year=" + encodeURIComponent(myYear) + "&month=" + encodeURIComponent(myMonth);
+		//window.location.href = url;
+		formBody.setAttribute("action", url)
+		submitButton.click();
+		});
+
+		let nextMnthBtn = document.querySelector('.next_month')
+		nextMnthBtn.addEventListener("click", function() {
+		var myMonth = {{ month }} + 1;
+		var myYear = {{ year }};
+		if (myMonth >= 13){
+		myMonth = 1
+		myYear = myYear + 1
+		};
+		var url = "{{ url_for('approval_calendar') }}?year=" + encodeURIComponent(myYear) + "&month=" + encodeURIComponent(myMonth);
+		//window.location.href = url;
+		formBody.setAttribute("action", url)
+		submitButton.click();
+		});
+
+	</script>
+
+{% endblock content %}

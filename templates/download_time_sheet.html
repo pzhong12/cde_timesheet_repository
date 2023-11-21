@@ -1,0 +1,301 @@
+{% set highlight = "download_time_sheet" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">download time sheet</h1>
+    <!-- <p class="lead">Hello {{user}}</p>
+    <hr class="my-4">
+    <p>It uses utility classes for typography and spacing to space content out within the larger container.</p> -->
+    <!--
+    <p class="lead">
+        <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+    </p>
+    -->
+</div>
+
+
+<form id="download_time_sheet" method="POST" action="">
+
+    <div id="employee" class="horizontal-container">
+
+    </div>
+
+    <div style="display: none;" id="optionsWrapper">
+
+    </div>
+
+    <div>
+        <label for="startDate">Start Date</label>
+        {% if startDate is none %}
+         <input id="startDate" type="date" name="startDate">
+        {% else %}
+        <input id="startDate" type="date" name="startDate" value="{{ startDate }}">
+        {% endif %}
+        <label for="endDate">end Date</label>
+        {% if endDate is none %}
+         <input id="endDate" type="date" name="endDate">
+        {% else %}
+        <input id="endDate" type="date" name="endDate" value="{{ endDate }}">
+        {% endif %}
+
+    </div>
+
+    <div>
+         <input type="submit" id="downloadTimeSheet" name="downloadTimeSheet" value="Download Time Sheet">
+    </div>
+
+    <div id="hours">
+    </div>
+
+</form>
+
+<style>
+
+    form {
+        margin: auto; /* Center the form */
+        width: 50%; /* Set the form width */
+        padding: 100px; /* Add some padding */
+        border: 1px solid #ccc; /* Add a border */
+        border-radius: 10px; /* Add rounded corners */
+        background-color: #f2f2f2; /* Add a background color */
+    }
+
+    .horizontal-container{
+    display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+    }
+    .horizontal-container > * {
+  flex-basis: 20%;
+}
+.btn-outline-info {
+             border-color: #FFD700;
+             color: #FFD700;
+        }
+
+        .btn-outline-info:hover{
+        color:black;
+        background-color:#FFD700;
+        border-color:#FFD700
+        }
+</style>
+
+<script>
+    function dateRangeFilled(startDate, endDate) {
+        if (startDate.value != '' && endDate.value != '') {
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+
+    var hoursArray = {{ hours }};
+    var form = document.getElementById('download_time_sheet');
+    var startDate = document.getElementById("startDate");
+    var endDate = document.getElementById("endDate");
+    var hoursField = document.getElementById("hours");
+    startDate.addEventListener("change", function() {
+            if (dateRangeFilled(startDate, endDate)){
+                form.submit();
+            }
+        })
+
+    endDate.addEventListener("change", function() {
+            if (dateRangeFilled(startDate, endDate)){
+                form.submit();
+            }
+        })
+
+    function generateHiddenOptions(selects){
+
+        while (hiddenOptionsDiv.firstChild) {
+            hiddenOptionsDiv.removeChild(hiddenOptionsDiv.firstChild);
+            }
+
+        for (var j = 0; j < selects.length; j++){
+            childSelect = selects[j];
+
+            for (var i = 0; i < childSelect.options.length; i++){
+                var hiddenOption = document.createElement("input");
+                hiddenOption.type = 'hidden';
+                hiddenOption.name = 'option';
+                if (childSelect.options[i].selected == true){
+                    prefix2 = 'y';
+                    }
+                else{
+                    prefix2 = 'n';
+                }
+                if (i == 0) {
+                    prefix1 = 'Y';
+                }
+                else{
+                    prefix1 = 'N';
+                }
+                hiddenOption.value = prefix1 + prefix2 + childSelect.options[i].value;
+                hiddenOptionsDiv.appendChild(hiddenOption);
+            }
+        }
+    }
+
+    function assignMultiValues(selectObj, selectedValues){
+        for (let i = 0; i < selectObj.options.length; i++) {
+        const option = selectObj.options[i];
+        option.selected = selectedValues.includes(option.value);
+        }
+    }
+
+    function getSelectedValues(selectObj){
+        const selectedOptions = [];
+        for (let i = 0; i < selectObj.options.length; i++) {
+            const option = selectObj.options[i];
+            if (option.selected) {
+            selectedOptions.push(option.value);
+            }
+        }
+        return selectedOptions;
+    }
+
+    function checkCondition(condition, userDataRow){
+        let matched = true;
+        for (var i = 0; i < condition.length; i++){
+            if (condition[i].length > 0){
+                if (!condition[i].includes(userDataRow[i])){
+                    matched = false;
+                    break;
+                }
+            }
+        }
+        return matched;
+    }
+
+    function getOptions(condition, userData, selectColumn){
+        var options = [];
+        selectedHours = 0
+        for (var i = 0; i < userData.length; i++){
+            if (checkCondition(condition, userData[i])){
+                selectedHours = selectedHours + hoursArray[i]
+                console.log('printing hours in row')
+                console.log(hoursArray[i])
+                value = userData[i][selectColumn];
+                if (!options.includes(value)) {
+                    options.push(value);
+                }
+            }
+        }
+        console.log(selectedHours);
+        hoursField.innerHTML = 'total hours of selected fields: ' + selectedHours;
+        return options;
+    }
+
+    var employeeDiv = document.getElementById("employee");
+    var hiddenOptionsDiv = document.getElementById("optionsWrapper");
+    var submitButton = document.getElementById("downloadTimeSheet");
+
+    const userData = {{ userData|safe }}
+    var selectedList = {{ selectedList|safe }}
+    var optionList = {{ optionList|safe }}
+
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    console.log(`${hours}:${minutes}:${seconds}`);
+    console.log(optionList);
+
+    headers = {{ headers|safe }};
+
+    for (var j = 0; j < optionList.length; j++){
+
+        var title = document.createElement('h5');
+        title.textContent = headers[j];
+
+        employeeDiv.appendChild(title);
+        }
+
+    for (var j = 0; j < optionList.length; j++){
+        var select = document.createElement("select");
+
+        select.setAttribute("multiple", "");
+        select.removeAttribute("required");
+
+        employeeDiv.appendChild(select);
+
+
+        optionValues = optionList[j];
+        for (var i = 0; i < optionValues.length; i++) {
+            var option = document.createElement("option");
+            option.value = optionValues[i];
+            option.text = optionValues[i];
+            select.add(option);
+        }
+
+        assignMultiValues(select, selectedList[j]);
+    }
+
+    var selects = employeeDiv.querySelectorAll("select");
+
+    for (var k = 0; k < selects.length; k++){
+        select = selects[k];
+        select.addEventListener("change", function(event) {
+            thisSelect = event.target;
+            isSelectAll = thisSelect.options[0].selected;
+            thisSelect.options[0].selected = false;
+            isDeselectAll = thisSelect.options[1].selected;
+            thisSelect.options[1].selected = false;
+            if (isSelectAll) {
+                for (var i = 2; i < thisSelect.length; i++) {
+                    thisSelect.options[i].selected = true;
+                }
+            }
+
+            if (isDeselectAll) {
+                for (var i = 2; i < thisSelect.length; i++) {
+                    thisSelect.options[i].selected = false;
+                }
+            }
+
+            var parentSelects = event.target.parentElement;
+            childSelects = parentSelects.querySelectorAll('select');
+
+            var globalCondition = [];
+            for (var i = 0; i < childSelects.length; i++){
+                childSelect = childSelects[i];
+                globalCondition.push(getSelectedValues(childSelect));
+            }
+
+            for (var i = 0; i < childSelects.length; i++){
+                childSelect = childSelects[i];
+
+                if (childSelect != event.target){
+                    thisCondition = Array.from(globalCondition);
+                    thisCondition[i] = [];
+
+                    options = getOptions(thisCondition, userData, i);
+                    selectedValues = getSelectedValues(childSelect);
+                    while (childSelect.options.length > 2) {
+                        childSelect.remove(2);
+                    }
+
+                    for (var j = 0; j < options.length; j++){
+                        option = document.createElement("option");
+                        option.value = options[j];
+                        option.text = options[j];
+                        childSelect.add(option);
+                    }
+                    assignMultiValues(childSelect, selectedValues);
+                }
+            }
+
+        });
+    }
+
+    submitButton.addEventListener("click", function(){
+            generateHiddenOptions(selects);
+        }
+    )
+
+</script>
+
+{% endblock content %}

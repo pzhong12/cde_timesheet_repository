@@ -1,0 +1,17 @@
+2023-04-28 17:48:39,514 INFO This is a print!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! message
+2023-04-28 17:48:39,514 ERROR division by zero
+Traceback (most recent call last):
+  File "C:\Users\PaulZhong\PycharmProjects\cde_timesheet\test.py", line 80, in <module>
+    1 / 0
+ZeroDivisionError: division by zero
+2023-04-28 17:48:39,515 ERROR Exception ignored in:
+2023-04-28 17:48:39,516 ERROR <__main__.LoggerWriter object at 0x00000213CA3F82B0>
+2023-04-28 17:48:39,516 ERROR AttributeError
+2023-04-28 17:48:39,516 ERROR :
+2023-04-28 17:48:39,516 ERROR 'LoggerWriter' object has no attribute 'flush'
+2023-04-28 17:48:39,516 ERROR Exception ignored in sys.unraisablehook
+2023-04-28 17:48:39,516 ERROR :
+2023-04-28 17:48:39,516 ERROR <built-in function unraisablehook>
+2023-04-28 17:48:39,517 ERROR AttributeError
+2023-04-28 17:48:39,517 ERROR :
+2023-04-28 17:48:39,517 ERROR 'LoggerWriter' object has no attribute 'flush'

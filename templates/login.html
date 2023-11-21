@@ -1,0 +1,63 @@
+{% set highlight = "login" %}
+{% extends "base.html" %}
+{% block content %}
+<style>
+        .container {
+        width: 300px;
+        max-width: 90%;
+        }
+    </style>
+    <div class="content-section">
+        <div class="container">
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <fieldset class="form-group">
+                    <legend class="border-bottom mb-4" style="text-align:center; color:white;">Login</legend>
+                    <div class="form-group" style="text-align:left; color:white;">
+                        {{ form.user_name.label(class="form-control-label") }}
+                        {% if form.user_name.errors %}
+                        {{ form.user_name(class="form-control for-control-lg is-invalid") }}
+                        <div class="invalid-feedback" style="text-align:left; color:white;">
+                            {% for error in form.user_name.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.user_name(class="form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group" style="text-align:left; color:white;">
+                        {{ form.password.label(class="form-control-label") }}
+                        {% if form.password.errors %}
+                        {{ form.password(class="form-control for-control-lg is-invalid") }}
+                        <div class="invalid-feedback" style="text-align:center;">
+                            {% for error in form.password.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        {{ form.password(class="form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <!--<div class="form-check" style="text-align:center;">
+                        {{ form.remember(class="form-check-input") }}
+                        {{ form.remember.label(class="form-check_label") }}
+                    </div>-->
+                </fieldset>
+                <div class="form-group" style="text-align:center;">
+                    {{ form.submit(class="btn btn-outline-info") }}
+                </div>
+                <div style="text-align:center;">
+                    <small class="text-muted ml-2">
+                        <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+                    </small>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!--<div class="border-top pt-3" style="text-align:center;">
+        <small class="text-muted">
+            Need an account? <a class="ml-2" href="{{ url_for('register') }}">Sign up</a>
+        </small>
+    </div>-->
+{% endblock content %}

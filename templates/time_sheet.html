@@ -1,0 +1,1213 @@
+{% if approval == 'True' %}
+{% set highlight = "approval" %}
+{% else %}
+{% set highlight = "time_sheet" %}
+{% endif %}
+{% extends 'base.html' %}
+
+{% block content %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+
+		table {
+			margin: 0 auto;
+		}
+
+		td {
+			padding: 10px;
+			border: 1px solid black;
+		}
+	</style>
+    <title>Work Hours</title>
+</head>
+<body>
+
+<div id="flash-message" class="hidden">
+  <p id="message-text"></p>
+</div>
+{% if user == 'admin'%}
+    {% set column_display_style = '' %}
+{% else %}
+    {% set column_display_style = 'hidden' %}
+{% endif %}
+<div class="container {{ column_display_style }}" id="expandableContainer">
+
+  <div class="content">
+      <div  style="color: white;">Check to show table columns</div><br>
+      {% for header in headers %}
+        {% if header not in ['entry', 'user_name', 'first_name', 'last_name', 'submit_date', 'csrf_token', 'remove'] %}
+        <input type="checkbox" name="{{ header }}" class="checkbox">
+        <label style="color: white;">{{ header }}</label><br>
+        {% endif %}
+      {% endfor %}
+      <button id="save_display_list" class="btn-outline-info">Apply</button>
+  </div><br>
+  <button class="expand-button btn-outline-info" onclick="toggleContent()">Expand Column Visibility</button>
+</div>
+
+<form onsubmit="submitForm(event)" id="timesheet" method="POST" action="">
+    <h1 style="text-align:center;  color: white;" id="time_sheet_title"></h1>
+    <h2 style="text-align:center; color: white;">{{ first_name }} {{last_name}}</h2>
+    <table id="table">
+    {{ form.hidden_tag() }}
+
+    <br/>
+
+    <tr>
+        {% for header in headers %}
+            {% for field in form.table_form[0] %}
+                {% set header_name = '-'.join(field.name.split('-')[2:]) %}
+                {% if header == header_name %}
+                    {% if header_name in ['entry', 'user_name', 'first_name', 'last_name', 'submit_date', 'csrf_token'] %}
+                        <td  style="background-color: purple; text-align:center; font-size: 150%; font-weight: bold; color: white; text-transform: capitalize" class="hidden-cell header" data-name="{{header}}"> {{ field.label }}</td>
+                    {% elif header_name == 'status' and approval != 'True' %}
+                        <td  style="background-color: purple; text-align:center; font-size: 150%; font-weight: bold; color: white; text-transform: capitalize" class="header" data-name="{{header}}">{{ field.label | replace('_', ' ') }}</td>
+                    {% elif header_name != 'remove' %}
+                        <td  style="background-color: purple; text-align:center; font-size: 150%; font-weight: bold; color: white; text-transform: capitalize" class="header" data-name="{{header}}">{{ field.label | replace('_', ' ') }}</td>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </tr>
+
+    <tr>
+        {% for header in headers %}
+            {% for field in form.table_form[0] %}
+                {% set header_name = '-'.join(field.name.split('-')[2:]) %}
+                {% if header == header_name %}
+                    {% if header_name in ['entry', 'user_name', 'first_name', 'last_name', 'submit_date', 'csrf_token'] %}
+                        <td style="background-color:grey; text-align:center;" class="hidden-cell header" data-name="{{header}}"><input type="text" placeholder="Search" data-name="{{header}}" style="text-align:center;" class="searchbox"></td>
+                    {% elif header_name == 'status' %}
+                        <td style="background-color:grey; text-align:center;" data-name="{{header}}"><input type="text" data-name="{{header}}" placeholder="Search" style="text-align:center;" class="searchbox"></td>
+                    {% elif header_name != 'remove' %}
+                        <td style="background-color:grey; text-align:center;" data-name="{{header}}"><input type="text" data-name="{{header}}" placeholder="Search" style="text-align:center;" class="searchbox"></td>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </tr>
+
+    <tbody id="tableBody">
+
+    {% for row in form.table_form %}
+
+        <tr class="single_row">
+        {% set can_edit = [] %}
+
+        {% for field in row %}
+            {% set header_name = '-'.join(field.name.split('-')[2:]) %}
+            {% if header_name == 'status' %}
+                {% if field.data not in ['approved', 'submitted'] %}
+                    {% set temp = can_edit.append(true) %}
+                {% else %}
+                    {% set temp = can_edit.append(false) %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+         {% for header in headers %}
+            {% for field in row %}
+                {% set header_name = '-'.join(field.name.split('-')[2:]) %}
+                {% if header == header_name %}
+                    {% if header_name in ['entry', 'user_name', 'first_name', 'last_name', 'submit_date', 'csrf_token'] %}
+                        <td style="background-color:grey; text-align:center;" class="hidden-cell" data-name="{{header}}">{{ field(class_='form-control', data_name=header) }}</td>
+                    {% elif header_name == 'status' and approval != 'True'%}
+                        <td style="background-color:grey; text-align:center;" data-name="{{header}}">{{ field.data }}{{ field(class='form-control hidden-cell', data_name=header) }}</td>
+                    {% elif header_name != 'remove' %}
+                        {% if can_edit[0] or approval == 'True' %}
+                            <td style="background-color:grey; text-align:center;" data-name="{{header}}">{{ field(class_='form-control', data_name=header) }}</td>
+                        {% else %}
+                            <td style="background-color:grey; text-align:center;" data-name="{{header}}">{{ field.data }}{{ field(class='form-control hidden-cell', data_name=header) }}</td>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+        {% endfor %}
+
+        {% if approval == 'True' or can_edit[0] %}
+
+            <td style="border: none;" data-name="{{header}}">{{ row.remove(class="btn btn-outline-info remove_row to_server", data_name=header) }}</td>
+        {% endif %}
+
+        </tr>
+    {% endfor %}
+    </tbody>
+
+    </table>
+    <br>
+    {% if approval_status in ['submitted', 'approved'] and approval != 'True' %}
+    {% set submit_button_display = "hidden" %}
+
+    {% endif %}
+    <div class="form-group submit-form {{ submit_button_display }}" style="text-align:center;">
+
+            {{ form.add_field(class="btn btn-outline-info add_row to_server") }}
+            {{ form.save(class="btn btn-outline-info save_table to_server") }}
+            {% if approval != 'True' %}
+                {{ form.submit(class="btn btn-outline-info submit_table to_server") }}
+            <br>
+            {% else %}
+                {{ form.submit(class="btn btn-outline-info submit_table to_server hidden") }}
+            {% endif %}
+            <br>
+
+            {% if approval != 'True'%}
+                <div style="color:white">Copied from Date</div>
+                <div>
+                {{ form.copy_date_selection(class="btn btn-outline-info", id="copy_date_selection") }}
+                {{ form.copy_from_date(class="btn btn-outline-info hidden", id="copy_from_date") }}
+                </div>
+                <br>
+                <div>
+                {{ form.save_to_template(class="btn btn-outline-info save_table to_server", id="save_to_template") }}
+                {{ form.restore_from_template(class="btn btn-outline-info to_server", id="restore_from_template") }}
+                </div>
+            {% else %}
+                <div>
+                {{ form.copy_date_selection(class="btn btn-outline-info hidden", id="copy_date_selection") }}
+                {{ form.copy_from_date(class="btn btn-outline-info hidden", id="copy_from_date") }}
+                </div>
+                <br>
+                <div>
+                {{ form.save_to_template(class="btn btn-outline-info save_table to_server hidden", id="save_to_template") }}
+                {{ form.restore_from_template(class="btn btn-outline-info to_server hidden", id="restore_from_template") }}
+                </div>
+            {% endif %}
+
+            {{ form.removed_list(id="removed_list", class="hidden") }}
+            {{ form.options_list(id="options_list", class="hidden") }}
+            {{ form.sort_status(id="sort_status", class="hidden") }}
+            <!-- <input type="text" id="removed_list" name="removed_list" value=""> -->
+
+            {% if approval == 'True' %}
+                <br>
+                {{ form.approve(class="btn btn-outline-info save_table to_server") }}
+                {{ form.reject(class="btn btn-outline-info save_table to_server") }}
+            {% endif %}
+
+            <br>
+
+            {{ form.removed_list(id="removed_list", class="hidden") }}
+            {{ form.options_list(id="options_list", class="hidden") }}
+            {{ form.sort_status(id="sort_status", class="hidden") }}
+            <!-- <input type="text" id="removed_list" name="removed_list" value=""> -->
+
+    </div>
+
+    <div style="text-align:center;" class="submit-form">
+        <button type="button" id="back" class="btn btn-outline-info">Back</button>
+    </div>
+
+    <style>
+
+        .container {
+          overflow: hidden;
+          transition: max-height 0.3s ease;
+        }
+
+        .content {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease;
+        }
+
+        .expanded {
+          max-height: 1000px; /* Set an appropriate value for the maximum height */
+        }
+
+        .hidden{
+        display: none;
+        }
+
+        .hidden-cell{
+        visibility: hidden;
+        position: absolute;
+        border: 0px solid transparent
+        }
+
+        .btn{
+        margin-right: 10px;
+        margin-left: 10px;
+        }
+
+        #flash-message {
+          display: none;
+          background-color: #4CAF50; /* Green background color for success message */
+          color: white;
+          text-align: center;
+          padding: 10px;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          z-index: 1000; /* Make sure it's above other elements */
+        }
+
+        #flash-message.error {
+          background-color: #f44336; /* Red background color for error message */
+        }
+
+        .btn-outline-info {
+             border-color: #FFD700;
+             color: #FFD700;
+        }
+
+        .btn-outline-info:hover{
+        color:black;
+        background-color:#FFD700;
+        border-color:#FFD700
+        }
+
+
+
+    </style>
+
+    <script>
+        const form = document.querySelector('#timesheet');
+        const submitBtn = document.querySelector('.submit_table');
+        const saveBtn = document.querySelector('.save_table');
+        const addFieldBtn = document.querySelector('.add_row');
+        const removeFieldBtn = document.querySelectorAll('.remove_row');
+        const back = document.querySelector('#back');
+        const title = document.querySelector('#time_sheet_title');
+        var submitBtnClicked = false;
+        var saveBtnClicked = false;
+
+        function displayFlashMessage(message, isError) {
+          const flashMessage = document.getElementById("flash-message");
+          const messageText = document.getElementById("message-text");
+
+          // Set the message text and style
+          messageText.textContent = message;
+          flashMessage.className = isError ? "error" : "";
+
+          // Show the message
+          flashMessage.style.display = "block";
+
+          // Automatically hide the message after a few seconds (adjust the time as needed)
+          setTimeout(() => {
+            flashMessage.style.display = "none";
+          }, 3000); // 3000 milliseconds = 3 seconds
+        }
+
+        submitBtn.addEventListener('click', function() {
+          console.log('submit Button clicked!');
+          form.removeAttribute('novalidate');
+          submitBtnClicked = true;
+
+        });
+
+        saveBtn.addEventListener('click', function(event) {
+          console.log('save Button clicked!');
+          form.removeAttribute('novalidate');
+          saveBtnClicked = true;
+        });
+
+        function submitForm(event){
+            rows = document.querySelectorAll('.single_row')
+            var total_hours = 0;
+            rows.forEach((row) => {
+                hour = row.querySelector('[data-name="hours"]').querySelector('[data-name="hours"]').value
+                if (hour == '' || hour == null) {
+                    hour = '0'
+                }
+
+                total_hours = total_hours + parseFloat(hour);
+                console.log('accum hour = ' + total_hours);
+            })
+
+
+            if (total_hours > 24 && (saveBtnClicked || submitBtnClicked)) {
+                console.log('prevent submission')
+                event.preventDefault();
+                submitBtnClicked = false;
+                saveBtnClicked = false;
+                displayFlashMessage("Total hours cannot exceed 24!", true);
+            }
+        }
+
+        addFieldBtn.addEventListener('click', function() {
+          console.log('add Button clicked!');
+          form.setAttribute('novalidate', '');
+        });
+
+        removeFieldBtn.forEach(function(button) {
+            button.addEventListener('click', function() {
+            console.log('remove Button clicked!');
+            form.setAttribute('novalidate', '');
+        });
+        });
+
+        const approval = "{{ approval }}";
+        back.addEventListener('click', function() {
+          form.setAttribute('novalidate', '');
+          var myYear = {{ year }}
+          var myMonth = {{ month }}
+          var myDay = {{ day }}
+          if (approval == 'True') {
+                var url = "{{ url_for('time_sheet_summary') }}?year=" + encodeURIComponent(myYear) + "&month=" + encodeURIComponent(myMonth)  + "&day=" + encodeURIComponent(myDay);
+          } else {
+                var url = "{{ url_for('calendar_month') }}?year=" + encodeURIComponent(myYear) + "&month=" + encodeURIComponent(myMonth);
+			}
+            window.location.href = url;
+        });
+
+        numToMonthTextDict = [
+			"January",
+			"February",
+			"March",
+			"April",
+			"May",
+			"June",
+			"July",
+			"August",
+			"September",
+			"October",
+			"November",
+			"December"
+			];
+        title.textContent = numToMonthTextDict[{{ month }} - 1] + " " + "{{ day }}," + " " + "{{ year }}";
+    </script>
+
+    <script>
+        // show list codes
+        function toggleContent() {
+          var container = document.getElementById("expandableContainer");
+          var content = container.querySelector(".content");
+          var expandButton = container.querySelector(".expand-button");
+
+          if (container.classList.contains("expanded")) {
+            // Contract the container
+            content.style.maxHeight = "0";
+            expandButton.textContent = "Expand Column Visibility";
+            container.classList.remove("expanded");
+          } else {
+            // Expand the container
+            content.style.maxHeight = content.scrollHeight + "px";
+            expandButton.textContent = "Collapse Column Visibility";
+            container.classList.add("expanded");
+          }
+        }
+
+        checkboxes = document.querySelectorAll('.checkbox');
+
+        document.addEventListener("DOMContentLoaded", function() {
+          checkedNames = {{ show_list|safe }};
+          console.log(checkedNames);
+          //checkboxes = document.querySelectorAll('.checkbox');
+          for (let n = 0; n < checkboxes.length; n++){
+            checkboxName = checkboxes[n].getAttribute('name');
+            if (checkedNames.includes(checkboxName)){
+                checkboxes[n].checked = true;
+            };
+          }
+          displayColumn();
+        });
+
+        function displayColumn(){
+            checkedNames = [];
+            fullList = [];
+            for (let m = 0; m < checkboxes.length; m++){
+                fullList.push(checkboxes[m].getAttribute('name'));
+                if (checkboxes[m].checked == true){
+                    checkedNames.push(checkboxes[m].getAttribute('name'))
+                }
+            }
+
+            console.log(checkedNames)
+            const table = document.getElementById('table');
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+              const cells = rows[i].querySelectorAll('th, td');
+              for (let j = 0; j < cells.length; j++){
+                if (checkedNames.includes(cells[j].getAttribute('data-name')) && fullList.includes(cells[j].getAttribute('data-name'))){
+                    //console.log('turn on display for')
+                    //console.log(columnNames[j])
+                    cells[j].style.display = '';
+                }else if(fullList.includes(cells[j].getAttribute('data-name')) | cells[j].getAttribute('data-name') == 'entry'){
+                    cells[j].style.display = 'none';
+                }
+
+              }
+            }
+        }
+
+        for (let n = 0; n < checkboxes.length; n++){
+            checkboxes[n].addEventListener("change", function(){
+                console.log('checkbox changed');
+                //displayColumn();
+            })
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+              // When the DOM content is loaded, show the body
+              document.body.style.visibility = 'visible';
+              });
+
+        saveDisplayListButton = document.querySelector('#save_display_list');
+        saveDisplayListButton.addEventListener('click', function(){
+            const xhr = new XMLHttpRequest();
+            const url = '/save_display_list';
+
+            checkedNames = [];
+            for (let m = 0; m < checkboxes.length; m++){
+                if (checkboxes[m].checked == true){
+                    checkedNames.push(checkboxes[m].getAttribute('name'))
+                }
+            }
+            var payload = JSON.stringify({ show_list: checkedNames, table_name: 'time_sheet' })
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(payload);
+
+            xhr.onreadystatechange = function() {
+              if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                  const responseData = JSON.parse(xhr.responseText);
+                  // Process the response data
+                  console.log(responseData);
+                  displayColumn();
+                } else {
+                  // Handle error
+                  console.log('Error:', xhr.status);
+                }
+              }
+            };
+
+        })
+    </script>
+
+    <script>
+
+        const tableContainer = document.querySelector('#table');
+        const removedList = document.getElementById('removed_list');
+        console.log("removed list initial value");
+        console.log(removedList.value);
+
+        tableContainer.addEventListener("click", function(event) {
+            console.log("table clicked")
+            const clickedElement = event.target;
+
+            if (clickedElement.classList.contains("remove_row"))
+            {
+                console.log("remove clicked");
+                var row = clickedElement.closest("tr");
+                var removedEntries = row.querySelector('[data-name="entry"]').querySelector('[data-name="entry"]')
+                console.log(removedEntries.value);
+                removedList.value = removedList.value + removedEntries.value + ",";
+
+			}
+		})
+
+        function generateDropdownList(formField, headers, cellValues) {
+            console.log("generate dropdown");
+            console.log(formField);
+            changedToBlank = false;
+            if (formField.tagName == "SELECT"){
+
+                var tableName = "time_sheet";
+                var targetColName = formField.getAttribute('data-name');
+
+                const xhr = new XMLHttpRequest();
+                const url = '/generate_webform_dropdown_list';
+
+                var payload = JSON.stringify({ table_name: tableName, target_column: targetColName, headers: headers, cell_values: cellValues})
+
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.send(payload);
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 200) {
+                            const responseData = JSON.parse(xhr.responseText);
+                            // Process the response data
+                            formField.innerHTML = "";
+                            for (var i = 0; i < responseData.dropdown_list.length; i++) {
+                            var option = document.createElement("option");
+                            option.value = responseData.dropdown_list[i];
+                            option.text = responseData.dropdown_list[i];
+                            formField.appendChild(option);
+                            }
+                            var currentCellValue = cellValues[headers.indexOf(targetColName)]
+                            console.log("current value is " + currentCellValue);
+
+                            var optionsList = responseData.dropdown_list;
+
+                            currentCellValue.forEach((cellValue) => {
+                                console.log("header = " + targetColName)
+                                console.log("option list = " + optionsList)
+                                console.log("cell value = " + cellValue)
+                                if (optionsList.includes(cellValue)){
+                                    selectedOptionIndex = optionsList.indexOf(cellValue);
+                                    formField.options[selectedOptionIndex].selected = true;
+                                }else{
+                                    formField.options[0].selected = true;
+                                    changedToBlank = true;
+                                }
+                            });
+
+                        } else {
+                            // Handle error
+                            console.log('Error:', xhr.status);
+                        }
+                    }
+                };
+
+            }
+            return changedToBlank;
+        }
+
+        const formFields = tableContainer.querySelectorAll(".form-control");
+        formFields.forEach((changedField) => {
+            changedField.addEventListener("change", function() {
+                //changedFormField = event.target;
+
+                var targetRow = changedField.parentNode.parentNode;
+                var rowFormFields = targetRow.querySelectorAll('.form-control');
+
+                loop = true;
+                j = 0;
+                var changedToBlankArray = [];
+                while (loop){
+                    var cellValues = [];
+                    var headers = [];
+                    for (i = 0; i < rowFormFields.length; i++) {
+                        if (rowFormFields[i].getAttribute('multiple') !== null) {
+                            var selectedValues = [];
+                            for (var a = 0; a < rowFormFields[i].selectedOptions.length; a++) {
+                                selectedValues.push(rowFormFields[i].selectedOptions[a].value);
+                            }
+                            cellValues.push(selectedValues);
+                        } else {
+                            cellValues.push([rowFormFields[i].value]);
+                            console.log("selected cell value = " + rowFormFields[i].value)
+                        }
+                        headers.push(rowFormFields[i].getAttribute('data-name'));
+                    }
+
+                    var formField = rowFormFields[j];
+
+                    var changedToBlank = generateDropdownList(formField, headers, cellValues)
+
+                    changedToBlankArray.push(changedToBlank);
+                    j++;
+
+                    if (j >= rowFormFields.length) {
+
+                        if (changedToBlankArray.every((value) => value === false)) {
+                            loop = false;
+                        }else{
+                            changedToBlankArray = [];
+                            j = 0;
+                        }
+                    }
+                }
+
+            })
+        });
+
+    function send_dropdown_list() {
+        var selectFieldDict = {};
+        formFields.forEach((formField) => {
+            if (formField.tagName == "SELECT") {
+                var optionsDict = {};
+                var optionsArray = [];
+                for (i = 0; i < formField.options.length; i++) {
+                    optionsArray.push(formField.options[i].value);
+
+                }
+
+                parentRow = formField.parentNode.parentNode;
+                var entryField = parentRow.querySelector('[data-name="entry"]').querySelector('[data-name="entry"]');
+                if (entryField.value == '') {
+                    entryField.value = Date.now()
+                    console.log('time in miliseconds ' + entryField.value)
+                }
+                headerWithEntry = formField.getAttribute('data-name') + '_' + entryField.value;
+                optionsDict['choices'] = optionsArray;
+                console.log('adding select value ' + formField.value)
+                optionsDict['selected'] = formField.value;
+                selectFieldDict[headerWithEntry] = optionsDict;
+            }
+        });
+        return JSON.stringify(selectFieldDict);
+    }
+
+    toServerButtons = document.querySelectorAll('.to_server');
+    optionsListField = document.querySelector('#options_list');
+    toServerButtons.forEach((button) => {
+        button.addEventListener("click", function(){
+            optionsListField.value = send_dropdown_list();
+            console.log("options list");
+            console.log(optionsListField.value);
+        });
+    });
+
+    </script>
+
+    <script>
+        function ascendingColumn(tableBody, header) {
+            console.log("sort event")
+            var tableRows = table.querySelectorAll('.single_row');
+            var tableRowsArray = [];
+            var headerValuesArray = [];
+            tableRows.forEach((row) => {
+                tableRowsArray.push(row);
+                var selector = '[data-name="' + header + '"]';
+                var headerValue = row.querySelector(selector).querySelector(selector).value;
+                headerValuesArray.push(headerValue);
+            });
+            var processedRows = [tableRowsArray[0]];
+            var processedHeaderValues = [headerValuesArray[0]];
+
+            for (i = 1; i < headerValuesArray.length; i++) {
+                var j = 0;
+                loop = true;
+                while (loop) {
+                    console.log('looping')
+                    const comparison = headerValuesArray[i].localeCompare(processedHeaderValues[j]);
+                    if (comparison < 0) {
+                        tableBody.insertBefore(tableRowsArray[i], processedRows[j])
+                        processedHeaderValues.splice(j, 0, headerValuesArray[i]);
+                        processedRows.splice(j, 0, tableRowsArray[i])
+                        loop = false;
+                    } else if (j >= headerValuesArray.length - 1) {
+                        loop = false;
+                        processedHeaderValues.push(headerValuesArray[i]);
+                        processedRows.push(tableRowsArray[i])
+                    }
+                    j++;
+                }
+            }
+        }
+
+        function descendingColumn(tableBody, header) {
+            console.log("sort event")
+            var tableRows = table.querySelectorAll('.single_row');
+            var tableRowsArray = [];
+            var headerValuesArray = [];
+            tableRows.forEach((row) => {
+                tableRowsArray.push(row);
+                var selector = '[data-name="' + header + '"]';
+                var headerValue = row.querySelector(selector).querySelector(selector).value;
+                headerValuesArray.push(headerValue);
+            });
+            var processedRows = [tableRowsArray[0]];
+            var processedHeaderValues = [headerValuesArray[0]];
+
+            for (i = 1; i < headerValuesArray.length; i++) {
+                var j = 0;
+                loop = true;
+                while (loop) {
+                    console.log('looping')
+                    const comparison = headerValuesArray[i].localeCompare(processedHeaderValues[j]);
+                    if (comparison > 0) {
+                        tableBody.insertBefore(tableRowsArray[i], processedRows[j])
+                        processedHeaderValues.splice(j, 0, headerValuesArray[i]);
+                        processedRows.splice(j, 0, tableRowsArray[i])
+                        loop = false;
+                    } else if (j >= headerValuesArray.length - 1) {
+                        loop = false;
+                        processedHeaderValues.push(headerValuesArray[i]);
+                        processedRows.push(tableRowsArray[i])
+                    }
+                    j++;
+                }
+            }
+        }
+
+        var sortStatusField = document.querySelector('#sort_status');
+        console.log('sort status from beginning')
+        const tableBody = document.querySelector('#tableBody');
+        const headers = document.querySelectorAll('.header')
+
+        console.log(sortStatusField.value)
+
+        if (sortStatusField.value != '') {
+            var sortDict = JSON.parse(sortStatusField.value)
+            if (sortDict['sort'] == 'ascending') {
+                ascendingColumn(tableBody, sortDict['header']);
+            } else if (sortDict['sort'] == 'descending') {
+                descendingColumn(tableBody, sortDict['header']);
+            }
+        }
+
+
+        headers.forEach((header) => {
+
+            header.addEventListener('click', () => {
+                console.log("click event")
+                var headerName = header.getAttribute('data-name');
+
+                if (sortStatusField.value == ''){
+                    ascendingColumn(tableBody, headerName);
+                    var sortDict = {'header': headerName, 'sort': 'ascending'}
+                    sortStatusField.value = JSON.stringify(sortDict)
+                } else if (JSON.parse(sortStatusField.value)['header'] != headerName) {
+                    ascendingColumn(tableBody, headerName);
+                    var sortDict = {'header': headerName, 'sort': 'ascending'}
+                    sortStatusField.value = JSON.stringify(sortDict)
+                } else if (JSON.parse(sortStatusField.value)['header'] == headerName && JSON.parse(sortStatusField.value)['sort'] == 'ascending'){
+                    descendingColumn(tableBody, headerName);
+                    var sortDict = {'header': headerName, 'sort': 'descending'}
+                    sortStatusField.value = JSON.stringify(sortDict)
+                } else if (JSON.parse(sortStatusField.value)['header'] == headerName && JSON.parse(sortStatusField.value)['sort'] == 'descending'){
+                    ascendingColumn(tableBody, headerName);
+                    var sortDict = {'header': headerName, 'sort': 'ascending'}
+                    sortStatusField.value = JSON.stringify(sortDict)
+                }
+
+            })
+        });
+
+    </script>
+
+    <script>
+        const textFields = document.querySelectorAll('.searchbox')
+        const tableRows = document.querySelector('#tableBody').querySelectorAll('.single_row')
+
+        function getObjectValue(object){
+
+            if (object.tagName == 'SELECT') {
+                console.log('object tagName is ' + object.tagName + ' ' + object.multiple)
+                console.log(object)
+                console.log('object option length = ' + object.options.length)
+                if (!object.multiple) {
+                    for (i=0; i < object.options.length; i++) {
+                        console.log('object tagName is ' + object.tagName + ' ' + object.multiple + ' ' + object.options[i].value)
+                        if (object.options[i].selected) {
+                            return object.options[i].value;
+                        }
+                    }
+                } else if (object.options.length > 0) {
+                    var appendedString = '';
+                    for (i=0; i < object.options.length; i++) {
+
+                        if (object.options[i].selected) {
+                            appendedString = appendedString +object.options[i].value;
+                        }
+                    }
+                    return appendedString;
+                } else if (object.options.length == 0) {
+                    console.log('multi options text content = ' + object.parentElement.textContent)
+                    return object.parentElement.textContent;
+                }
+
+            } else {
+                return object.value;
+            }
+        }
+
+        function isValidDate(dateString) {
+
+            // Attempt to create a Date object from the string
+            var date = new Date(dateString);
+
+            // Check if the date is a valid date and the string representation of the date is the same as the input string
+            return !isNaN(date.getFullYear())
+            }
+
+
+        function isNumeric(value) {
+          // Use parseFloat to attempt conversion to a floating-point number
+          var number = parseFloat(value);
+
+          // Check if the result is a number and not NaN
+          return !isNaN(number) && isFinite(number);
+        }
+
+        function insertString(mainString, startIndices, endIndices, firstInsertString, lastInsertString) {
+            indexDelta = 0;
+            modifiedString = mainString;
+            for (i = 0; i < startIndices.length; i++) {
+                console.log('mainstring 1st sub = ' + mainString.substring(0, startIndices[i] + indexDelta))
+                console.log('first insert string = ' + firstInsertString)
+               modifiedString = modifiedString.substring(0, startIndices[i] + indexDelta) + firstInsertString + modifiedString.substring(startIndices[i] + indexDelta, endIndices[i] + indexDelta + 1) + lastInsertString + modifiedString.substring(endIndices[i] + indexDelta + 1);
+               indexDelta = indexDelta + firstInsertString.length + lastInsertString.length
+
+            }
+            return modifiedString;
+        }
+
+        function findDateFromString(mainString) {
+
+            dateStringArray = [];
+            dateString = '';
+            numericChars = '0123456789';
+            numericIndices = [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18];
+            colonIndices = [13, 16];
+            spaceIndices = [10];
+            hyphenIndices = [4, 7];
+            dateIndex = 0;
+            finalDateIndex = 0;
+            startIndex = [];
+            endIndex = [];
+
+            for (i=0; i < mainString.length; i++) {
+
+                if (numericIndices.includes(dateIndex) && numericChars.includes(mainString[i])){
+                    dateString = dateString + mainString[i];
+                    console.log('finding date string = ' + mainString[i] + '& date index is ' + dateIndex + 'datestring = ' + dateString)
+                    dateIndex ++;
+                    finalDateIndex++;
+                    if (dateIndex == 1) {
+                        if (startIndex.length == endIndex.length) {
+                            startIndex.push(i)
+                        } else if (startIndex.length > endIndex.length) {
+                            startIndex[startIndex.length - 1] = i;
+                        } else {
+                            console.log('index error')
+                        }
+                    }
+
+                } else if (hyphenIndices.includes(dateIndex) && mainString[i] == '-') {
+                    dateString = dateString + mainString[i];
+                    console.log('finding date string = ' + mainString[i] + '& date index is ' + dateIndex + 'datestring = ' + dateString)
+                    dateIndex ++;
+                    finalDateIndex++;
+                    if (dateIndex == 1) {
+                        if (startIndex.length == endIndex.length) {
+                            startIndex.push(i)
+                        } else if (startIndex.length > endIndex.length) {
+                            startIndex[startIndex.length - 1] = i;
+                        } else {
+                            console.log('index error')
+                        }
+                    }
+                } else if (spaceIndices.includes(dateIndex) && mainString[i] == ' ') {
+                    dateString = dateString + mainString[i];
+                    console.log('finding date string = ' + mainString[i] + '& date index is ' + dateIndex + 'datestring = ' + dateString)
+                    dateIndex ++;
+                    finalDateIndex++;
+                    if (dateIndex == 1) {
+                        if (startIndex.length == endIndex.length) {
+                            startIndex.push(i)
+                        } else if (startIndex.length > endIndex.length) {
+                            startIndex[startIndex.length - 1] = i;
+                        } else {
+                            console.log('index error')
+                        }
+                    }
+                } else if (colonIndices.includes(dateIndex) && mainString[i] == ':') {
+                    dateString = dateString + mainString[i];
+                    console.log('finding date string = ' + mainString[i] + '& date index is ' + dateIndex + 'datestring = ' + dateString)
+                    dateIndex ++;
+                    finalDateIndex++;
+                    if (dateIndex == 1) {
+                        if (startIndex.length == endIndex.length) {
+                            startIndex.push(i)
+                        } else if (startIndex.length > endIndex.length) {
+                            startIndex[startIndex.length - 1] = i;
+                        } else {
+                            console.log('index error')
+                        }
+                    }
+                } else {
+                    dateIndex = 0;
+                }
+
+                console.log('date index = ' + dateIndex)
+                console.log('final date index = ' + finalDateIndex)
+                console.log('date string = ' + dateString)
+                if (dateIndex > 18) {
+                    console.log('full date string ' + dateString)
+                    dateStringArray.push(dateString);
+                    dateString = '';
+                    endIndex.push(i)
+
+                } else if (finalDateIndex > 9 && finalDateIndex <= 18 && ((dateIndex == 10 && i == mainString.length - 1) | dateIndex == 0)) {
+                    console.log('dateIndex = ' + dateIndex)
+                    console.log('i = ' + i + ' and mainstring length - 1 = ' + mainString.length - 1)
+                    console.log('final index = ' + finalDateIndex)
+                    console.log('date string = ' + dateString.slice(0, 10))
+                    dateStringArray.push(dateString.slice(0, 10))
+                    finalDateIndex = 0;
+                    dateString = '';
+                    endIndex.push(startIndex[startIndex.length - 1] + 9)
+                }
+
+            }
+
+            if (startIndex.length > endIndex.length) {
+                startIndex.pop()
+            }
+            console.log('date string array ')
+            console.log(dateStringArray)
+            console.log('startIndex ' + startIndex)
+            console.log('endIndex ' + endIndex)
+            //dateStringArray = sortByLengthDescending(dateStringArray)
+            modifiedString = insertString(mainString, startIndex, endIndex, 'Date("', '")')
+            console.log('modifiedString = ' + modifiedString);
+            return modifiedString;
+        }
+
+        function findStringFromMainString(mainString) {
+            subString = '';
+            subStringArray = [];
+            strIndex = 0;
+            startIndex = [];
+            endIndex = [];
+            nonStrChars = ['=', '!', '.', '>', '<', '(', ')', '?', '&', '|'];
+            for (i=0; i < mainString.length; i++) {
+                if (!nonStrChars.includes(mainString[i])){
+                    subString = subString + mainString[i];
+                    strIndex ++;
+                    console.log('adding chars')
+                    console.log('substring = ' + subString)
+                    }
+
+                if ((strIndex > 0 && i >= mainString.length - 1)) {
+                    strIndex = 0;
+                    if (!subString.includes('"') && !subString.includes('includes') && !subString.includes('Date')) {
+                        subStringArray.push(subString);
+                        startIndex.push(i - subString.length + 1)
+                        endIndex.push(i)
+                    }
+                    subString = '';
+                } else if ((strIndex > 0 && nonStrChars.includes(mainString[i]))) {
+                    strIndex = 0;
+                    if (!subString.includes('"') && !subString.includes('includes') && !subString.includes('Date')) {
+                        subStringArray.push(subString);
+                        startIndex.push(i - subString.length)
+                        endIndex.push(i - 1)
+                    }
+                    subString = '';
+                }
+
+            }
+            console.log('start index = ' + startIndex)
+            console.log('end index = ' + endIndex)
+            console.log('substring array = ' + subStringArray)
+            modifiedString = insertString(mainString, startIndex, endIndex, '"', '"')
+            console.log('modified string = ' + modifiedString)
+            //return subStringArray;
+            return modifiedString
+        }
+
+        function findDotString(mainString) {
+            leftCharsArray = [];
+            rightCharsArray = [];
+            startIndex = [];
+            endIndex = [];
+            nonStrChars = ['=', '!', '.', '>', '<', '(', ')', '?', '&', '|'];
+            for (i = 0; i < mainString.length; i++) {
+
+                if (mainString[i] == '.') {
+                    j = i + 1;
+                    k = i - 1;
+                    rightChars = '';
+                    leftChars = '';
+                    while (true) {
+
+                        if (nonStrChars.includes(mainString[k])) {
+                            leftCharsArray.push(leftChars);
+                            break;
+                        } else if (k == 0) {
+                            leftChars = mainString[k] + leftChars
+                            break;
+                        } else {
+                            leftChars = mainString[k] + leftChars
+                            k = k - 1;
+                        }
+
+                    }
+                    while (true) {
+                        if (nonStrChars.includes(mainString[j])) {
+                            rightCharsArray.push(rightChars);
+                            startIndex.push(j - rightChars.length)
+                            endIndex.push(j - 1)
+                            break;
+                        }
+                        else if (j >= mainString.length) {
+                            rightCharsArray.push(rightChars);
+                            startIndex.push(j - rightChars.length)
+                            endIndex.push(j - 1)
+                            break;
+                        } else {
+                            rightChars = rightChars + mainString[j]
+                            j = j + 1;
+                        }
+
+                    }
+                }
+            }
+            console.log('start index = ' + startIndex)
+            console.log('end index = ' + endIndex)
+            modifiedString = insertString(mainString, startIndex, endIndex, 'includes("', '")')
+            console.log('modifiedString = ' + modifiedString)
+            //return rightCharsArray;
+            return modifiedString
+        }
+
+        function sortByLengthDescending(strings) {
+            // Use the sort() method with a custom comparator function
+            strings.sort(function(a, b) {
+                // Compare strings by their length in descending order
+                return b.length - a.length;
+            });
+
+            // Return the sorted array
+            return strings;
+        }
+
+        function convertConditionalString(rowValue, conditionalString) {
+
+            var rowValueDatatype = 'string';
+
+            if (isValidDate(rowValue)){
+                rowValueDatatype = 'date';
+            } else if (isNumeric(rowValue)) {
+                rowValueDatatype = 'float';
+            }
+
+
+            conditionalString = findDateFromString(conditionalString);
+            conditionalString = findDotString(conditionalString);
+            conditionalString = findStringFromMainString(conditionalString);
+
+            //rightCharsArray = findDotString(conditionalString);
+            /*dateStringArray.forEach((dateString) => {
+                var searchString = new RegExp(dateString, "g");
+                conditionalString = conditionalString.replace(searchString, 'Date("' + dateString + '")')
+            })*/
+            /*rightCharsArray.forEach((rightChars) => {
+                var searchString = new RegExp(rightChars, "g");
+                console.log('right string = ' + rightChars)
+                conditionalString = conditionalString.replace(searchString, '"' + rightChars + '")')
+            })*/
+
+
+            conditionalString = conditionalString.replace(/\=/g, '==')
+            conditionalString = conditionalString.replace(/\>==/g, '>=')
+            conditionalString = conditionalString.replace(/\<==/g, '>=')
+            conditionalString = conditionalString.replace(/\&/g, '&&')
+            conditionalString = conditionalString.replace(/\|/g, '||')
+            //conditionalString = conditionalString.replace(/\!/g, '!=')
+            //conditionalString = conditionalString.replace(/\./g, '.includes(')
+            console.log('datatype = ' + rowValueDatatype)
+            if (rowValueDatatype == 'date'){
+                conditionalString = conditionalString.replace(/\?/g, 'Date("' + rowValue + '")');
+            } else if (rowValueDatatype == 'float') {
+                console.log('this is float')
+                conditionalString = conditionalString.replace(/\?/g, rowValue);
+            } else if (rowValueDatatype == 'string') {
+                console.log('in string section')
+                var searchString = new RegExp(rowValue, "g");
+                conditionalString = conditionalString.replace(/\?/g, '"' + rowValue + '"');
+            }
+
+            console.log('condition statement');
+            console.log(conditionalString);
+            return conditionalString;
+        }
+
+        function filterOneColumn(header, value) {
+            var filteredEntries = [];
+            tableRows.forEach((tr) => {
+                var headerValue = getObjectValue(tr.querySelector('[data-name="' + header + '"]').querySelector('[data-name="' + header + '"]'));
+                console.log("header value = " + headerValue);
+                // replace the following if statement with custom compare
+                console.log('header value = ' + headerValue);
+                if (value.includes('?')) {
+                    console.log('? detected')
+                    var conditionalStatement = convertConditionalString(headerValue, value)
+                    console.log('conditional statement =')
+                    console.log(conditionalStatement)
+                    if (eval(conditionalStatement)) {
+                        filteredEntries.push(tr);
+                    }
+                } else if (headerValue.includes(value)) {
+                    console.log('no ?')
+                    filteredEntries.push(tr);
+                }
+            })
+            return filteredEntries
+        }
+
+        function filteredAllColumns(){
+            filteredArrayCluster = [];
+            textFields.forEach((textField) => {
+                if (textField.value != "" && textField.value != null){
+                    header = textField.getAttribute('data-name');
+                    value = textField.value;
+                    filteredArray = filterOneColumn(header, value);
+                    filteredArrayCluster.push(filteredArray);
+                }
+            });
+            commonEntries = findCommonElements(filteredArrayCluster);
+            return commonEntries;
+        }
+
+        function findCommonElements(arrays) {
+            if (arrays.length == 1) {
+                return arrays[0];
+            }
+
+            if (arrays.length == 0) {
+                return "all";
+            }
+
+            // Start with the first array as the base
+            const baseArray = arrays[0];
+
+            // Use the filter method to check if each element in the base array
+            // exists in all other arrays
+            const commonElements = baseArray.filter(element => {
+                return arrays.every(array => array.includes(element));
+            });
+
+            return commonElements;
+        }
+
+    function showRowsFromEntries(entries){
+        tableRows.forEach((tr) => {
+            console.log(tr.querySelector('[data-name="entry"]').textContent)
+            console.log(entries)
+            console.log(entries.includes(tr.querySelector('[data-name="entry"]').textContent))
+            if (entries != "all" && !(entries.includes(tr))){
+                console.log("hiding row entry number " + tr.querySelector('[data-name="entry"]').textContent)
+                tr.style.display = "none";
+            } else {
+                tr.style.display = "";
+            }
+        })
+    }
+    textFields.forEach((textField) => {
+        textField.addEventListener('input', () => {
+        commonEntries = filteredAllColumns();
+        console.log("common entries = " + commonEntries);
+        console.log("length of common entries = " + commonEntries.length)
+        showRowsFromEntries(commonEntries);
+        });
+    });
+
+    </script>
+
+    <script>
+
+        const date_selector = document.querySelector('#copy_date_selection')
+        const date_submit = document.querySelector('#copy_from_date')
+
+        date_selector.addEventListener('change', (event) => {
+            if (date_selector.value != '') {
+                date_submit.click();
+            }
+        })
+
+
+
+    </script>
+
+
+</form>
+</body>
+</html>
+
+{% endblock content %}
+

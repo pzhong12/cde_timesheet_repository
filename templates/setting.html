@@ -1,0 +1,70 @@
+{% set highlight = "setting" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4" style="font-family: custom-large-font">Database Setting</h1>
+    <!-- <p class="lead">Hello {{user}}</p>
+    <hr class="my-4">
+    <p>It uses utility classes for typography and spacing to space content out within the larger container.</p> -->
+    <!--
+    <p class="lead">
+        <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+    </p>
+    -->
+</div>
+
+<div class="button-container">
+    {% if user == 'admin' or 'user setting' in access_list %}
+    <a href="{{ url_for('user_summary') }}" class="button">User</a>
+    {% endif %}
+    {% if user == 'admin' or 'project setting' in access_list %}
+    <a href="{{ url_for('project_summary') }}" class="button">Project</a>
+    {% endif %}
+    {% if user == 'admin' or 'client setting' in access_list %}
+    <a href="{{ url_for('client_summary') }}" class="button">Client</a>
+    {% endif %}
+    {% if user == 'admin' or 'discipline setting' in access_list %}
+    <a href="{{ url_for('discipline_summary') }}" class="button">Discipline</a>
+    {% endif %}
+    {% if user == 'admin' or 'activity setting' in access_list %}
+    <a href="{{ url_for('activity_summary') }}" class="button">Activity</a>
+    {% endif %}
+</div>
+
+<style>
+
+.button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #4CAF50;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.button-container {
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #f2f2f2;
+  width: 50%;
+  margin: 0 auto;
+  background-color: rgba(0, 0, 0, 0); /* Adjust the last value (0.5) for transparency */
+    border: none;
+}
+.btn-outline-info {
+             border-color: #FFD700;
+             color: #FFD700;
+        }
+
+        .btn-outline-info:hover{
+        color:black;
+        background-color:#FFD700;
+        border-color:#FFD700
+        }
+</style>
+
+{% endblock content %}

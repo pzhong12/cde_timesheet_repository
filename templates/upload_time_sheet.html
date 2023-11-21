@@ -1,0 +1,48 @@
+{% set highlight = "time_sheet_menu" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Upload Time Sheet</h1>
+    <!-- <p class="lead">Hello {{user}}</p>
+    <hr class="my-4">
+    <p>It uses utility classes for typography and spacing to space content out within the larger container.</p> -->
+    <!--
+    <p class="lead">
+        <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+    </p>
+    -->
+</div>
+
+<form method="POST" action="" id="upload_time_sheet" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="button-container">
+        {{ form.file }} {{ form.submit }}
+    </div>
+</form>
+
+<style>
+
+.button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #4CAF50;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.button-container {
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #f2f2f2;
+  width: 50%;
+  margin: 0 auto;
+}
+
+</style>
+
+{% endblock content %}

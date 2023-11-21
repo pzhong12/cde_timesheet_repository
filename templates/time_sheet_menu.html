@@ -1,0 +1,53 @@
+{% set highlight = "time_sheet" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4" style="font-family: custom-large-font">Time Sheet</h1>
+    <!-- <p class="lead">Hello {{user}}</p>
+    <hr class="my-4">
+    <p>It uses utility classes for typography and spacing to space content out within the larger container.</p> -->
+    <!--
+    <p class="lead">
+        <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+    </p>
+    -->
+</div>
+
+<div class="button-container">
+    <a href="{{ url_for('calendar_month') }}" class="button">Submit Time Sheet Form</a>
+    <!-- <a href="{{ url_for('download_time_sheet') }}" class="button">Download Time Sheet</a>
+    <a href="{{ url_for('upload_time_sheet') }}" class="button">Upload Time Sheet</a> -->
+    <a href="{{ url_for('approval_calendar') }}" class="button">Approve Time Sheet</a>
+
+</div>
+
+<style>
+
+.button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #4CAF50;
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.button-container {
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #f2f2f2;
+  width: 50%;
+  margin: 0 auto;
+
+    background-color: rgba(0, 0, 0, 0); /* Adjust the last value (0.5) for transparency */
+    border: none;
+
+}
+
+</style>
+
+{% endblock content %}

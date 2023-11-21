@@ -1,0 +1,229 @@
+{% set highlight = "setting" %}
+{% extends "base.html" %}
+{% block content %}
+
+    <style>
+        .container {
+        width: 300px;
+        max-width: 90%;
+        }
+        .btn-outline-info {
+             border-color: #FFD700;
+             color: #FFD700;
+        }
+
+        .btn-outline-info:hover{
+        color:black;
+        background-color:#FFD700;
+        border-color:#FFD700
+        }
+    </style>
+    <div class="content-section">
+        <div class="container">
+            <form method="POST" action="" id="form_list">
+                {{ form.hidden_tag() }}
+
+                <fieldset class="form-group">
+                    <legend class="border-bottom mb-4" style="text-align:center; color:white;">Discipline Details</legend>
+                    {% for header in headers %}
+                    {% for field in form %}
+                        {% if field.name == header%}
+                        {# if (status == 'new' and field.name not in ['delete', 'csrf_token', 'edit']) or (status == 'edit' and field.name not in ['password', 'confirm_password', 'edit', 'csrf_token']) #}
+                            <div class="form-group" style="text-align:left;color:white;" data-name="{{ header }}_div">
+                            {{ field.label(class="form-control-label") | replace('_', ' ') }}
+                            {% set class_name = field.name | replace(' ', '_') | lower %}
+                            {% if field.errors %}
+                                {{ field(class="form-control for-control-lg is-invalid form_field " + class_name, data_name=header) }}
+                                <div class="invalid-feedback">
+                                    {% for error in field.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ field(class="form-control form_field {{ class_name }} " + class_name, data_name=header) }}
+                            {% endif %}
+                            </div>
+                        {# endif #}
+                        {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+
+                    {% for field in form %}
+                        {% if field.name in ['save', 'submit', 'delete'] %}
+                            {{ field(class= field.name + ' btn-outline-info') }}
+                        {% endif %}
+                    {% endfor %}
+
+                </fieldset>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        entryDiv = document.querySelectorAll('[data-name="entry_div"]')
+        console.log('entry div')
+        console.log(entryDiv)
+        for (let n = 0; n < entryDiv.length; n++) {
+            entryDiv[n].style.display = 'none';
+            console.log('hiding entry')
+        }
+
+        var disciplineName = document.querySelector(".discipline");
+        var formList = document.querySelector("#form_list");
+        status = "{{ status }}";
+        console.log(status);
+        if (status == "edit"){
+        console.log("setting disciplineName to readonly");
+        // disciplineName.setAttribute("readonly", "");
+        }
+
+        var deleteDiscipline = document.querySelector(".delete");
+        deleteDiscipline.addEventListener("click", function(){
+            formList.setAttribute("novalidate", "")
+        })
+
+        function generateDropdownList(formField, headers, cellValues) {
+            console.log("generate dropdown");
+            console.log(formField);
+            changedToBlank = false;
+            if (formField.tagName == "SELECT"){
+
+                var tableName = "discipline";
+                var targetColName = formField.getAttribute('data-name');
+
+                const xhr = new XMLHttpRequest();
+                const url = '/generate_webform_dropdown_list';
+
+                var payload = JSON.stringify({ table_name: tableName, target_column: targetColName, headers: headers, cell_values: cellValues})
+
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.send(payload);
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 200) {
+                            const responseData = JSON.parse(xhr.responseText);
+                            // Process the response data
+                            formField.innerHTML = "";
+                            for (var i = 0; i < responseData.dropdown_list.length; i++) {
+                            var option = document.createElement("option");
+                            option.value = responseData.dropdown_list[i];
+                            option.text = responseData.dropdown_list[i];
+                            formField.appendChild(option);
+                            }
+                            var currentCellValue = cellValues[headers.indexOf(targetColName)]
+                            console.log("current value is " + currentCellValue);
+
+                            var optionsList = responseData.dropdown_list;
+
+                            currentCellValue.forEach((cellValue) => {
+                                if (optionsList.includes(cellValue)) {
+
+                                    selectedOptionIndex = optionsList.indexOf(cellValue);
+                                    formField.options[selectedOptionIndex].selected = true;
+                                    // testing
+
+                                    // end testing
+                                }else{
+                                    formField.options[0].selected = true;
+                                    changedToBlank = true;
+                                }
+                            });
+
+                        } else {
+                            // Handle error
+                            console.log('Error:', xhr.status);
+                        }
+                    }
+                };
+
+            }
+            return changedToBlank;
+        }
+
+        const formContainer = document.querySelector('.container')
+        const formFields = formContainer.querySelectorAll(".form-control");
+        formFields.forEach((changedField) => {
+            changedField.addEventListener("change", function() {
+                changedFormField = event.target;
+
+                loop = true;
+                j = 0;
+                var changedToBlankArray = [];
+                while (loop){
+                    var cellValues = [];
+                    var headers = [];
+
+                    for (i = 0; i < formFields.length; i++) {
+                        if (formFields[i].getAttribute('multiple') !== null) {
+                            var selectedValues = [];
+                            for (var a = 0; a < formFields[i].selectedOptions.length; a++) {
+                                selectedValues.push(formFields[i].selectedOptions[a].value);
+                            }
+                            cellValues.push(selectedValues);
+                        } else {
+                            cellValues.push([formFields[i].value]);
+                        }
+                        console.log("field type")
+
+                        console.log(formFields[i].getAttribute('multiple') !== null )
+                        headers.push(formFields[i].getAttribute('data-name'));
+                    }
+                    console.log("cell values")
+                    console.log(cellValues)
+
+                    var formField = formFields[j];
+                    var changedToBlank = generateDropdownList(formField, headers, cellValues)
+                    changedToBlankArray.push(changedToBlank);
+                    j++;
+
+                    if (j >= formFields.length) {
+
+                        if (changedToBlankArray.every((value) => value === false)) {
+                            loop = false;
+                        }else{
+                            changedToBlankArray = [];
+                            j = 0;
+                        }
+                    }
+                }
+
+            })
+        });
+
+    function send_dropdown_list() {
+        var selectFieldDict = {};
+        formFields.forEach((formField) => {
+            if (formField.tagName == "SELECT") {
+                var optionsDict = {};
+                var optionsArray = [];
+                for (i = 0; i < formField.options.length; i++) {
+                    optionsArray.push(formField.options[i].value);
+                }
+
+                parentRow = formField.parentNode.parentNode;
+                var entryField = parentRow.querySelector('[data-name="entry"]').querySelector('[data-name="entry"]');
+
+                headerWithEntry = formField.getAttribute('data-name') + '_' + entryField.value;
+                optionsDict['choices'] = optionsArray;
+                optionsDict['selected'] = formField.value;
+                selectFieldDict[headerWithEntry] = optionsDict;
+            }
+        });
+        return JSON.stringify(selectFieldDict);
+    }
+
+    toServerButtons = document.querySelectorAll('.to_server');
+    optionsListField = document.querySelector('#options_list');
+    toServerButtons.forEach((button) => {
+        button.addEventListener("click", function(){
+            optionsListField.value = send_dropdown_list();
+            console.log("options list");
+            console.log(optionsListField.value);
+        });
+    });
+
+    </script>
+
+{% endblock content %}

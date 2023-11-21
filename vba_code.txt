@@ -1,0 +1,533 @@
+Sub Pause(seconds As Double)
+    Dim startTime As Double
+    startTime = Timer
+    Do While Timer < startTime + seconds
+        DoEvents
+    Loop
+End Sub
+
+Function ContainsSubstring(ByVal mainString As String, ByVal substring As String) As Boolean
+    Dim mainS As String
+    Dim subS As String
+    mainStr = mainString
+    subStr = substring
+    mainStr = Replace(mainStr, " ", "")
+    mainStr = LCase(mainStr)
+    subStr = Replace(subStr, " ", "")
+    subStr = LCase(subStr)
+    
+    If mainStr = subStr Or InStr(1, mainStr, subStr & "/;", vbTextCompare) > 0 Or InStr(1, mainStr, "/;" & subStr, vbTextCompare) > 0 Or InStr(1, mainStr, "," & subStr, vbTextCompare) > 0 Or InStr(1, mainStr, "," & subStr, vbTextCompare) > 0 Or InStr(1, mainStr, subStr & ",", vbTextCompare) > 0 Then
+        ContainsSubstring = True
+    Else
+        ContainSubstring = False
+    End If
+    
+    If Trim(substring) = "" Then
+        Debug.Print "empty"
+        ContainsSubstring = False
+    End If
+End Function
+
+Function IsItemInCollection(ByVal targetItem As Variant, ByVal coll As Collection) As Boolean
+    Dim item As Variant
+    
+    For Each item In coll
+        If item = targetItem Then
+            IsItemInCollection = True
+            Exit Function
+        End If
+    Next item
+    
+    IsItemInCollection = False
+End Function
+
+Function isRowInAllArrays(ByVal compareCell As Range, ByVal rangeCollection As Collection) As Boolean
+    Dim i As Long
+    Dim j As Long
+    Dim isCommon As Boolean
+    
+    isCommon = False
+    For i = 1 To rangeCollection.Count
+        For j = 1 To rangeCollection(i).Count
+            If compareCell.row = rangeCollection(i)(j).row Then
+                If i = rangeCollection.Count Then
+                    isCommon = True
+                Else
+                    GoTo line1
+                End If
+            Else
+                If j = rangeCollection(i).Count Then
+                    GoTo line2
+                End If
+            End If
+        Next j
+        
+        If rangeCollection(i).Count = 0 Then
+            Debug.Print "empty column to compare"
+            isCommon = False
+            GoTo line2
+        End If
+        
+line1:
+    Next i
+line2:
+    isRowInAllArrays = isCommon
+End Function
+
+Function getFilteredRows(ByRef criteriaColumn As Collection, ByRef criteriaCell As Collection) As Collection
+    
+    Dim filteredMatrix As Collection
+    Dim filteredCells As Collection
+    Dim filteredRows As Collection
+    Dim sourceColumn As Long
+    Dim ws As Worksheet
+    Dim sourceSheetName As String
+    'sourceSheetName = sourceRange.Parent.Name
+    'sourceColumn = sourceRange.Column
+    'Set ws = ThisWorkbook.Worksheets(sourceSheetName)
+    
+    Set filteredMatrix = New Collection
+    
+    Dim lastRow As Long
+    
+    
+    If criteriaCell.Count > 0 And criteriaColumn.Count > 0 Then
+    
+        For i = 1 To criteriaColumn.Count
+            Set filteredCells = New Collection
+            lastRow = Worksheets(criteriaColumn(i).Parent.Name).Cells(Rows.Count, criteriaColumn(i).Column).End(xlUp).row
+            
+            For Each cell In criteriaColumn(i)
+                If cell.row > lastRow Then
+                    GoTo line1
+                End If
+                If ContainsSubstring(CStr(cell.Value), CStr(criteriaCell(i))) Then
+                    filteredCells.Add cell
+                End If
+                
+            Next cell
+            
+            
+line1:
+            'If filteredCells.Count > 0 Then
+            filteredMatrix.Add filteredCells
+            'End If
+           
+           
+    
+        Next i
+        
+        
+        Set filteredRows = New Collection
+        
+        For Each col In filteredMatrix
+            For Each cell In col
+                If Not IsItemInCollection(cell.row, filteredRows) Then
+                    If isRowInAllArrays(cell, filteredMatrix) Then
+                        filteredRows.Add cell.row
+                    End If
+                End If
+            Next cell
+        Next col
+        
+        
+        
+    End If
+    
+    If criteriaCell.Count = 0 And criteriaColumn.Count > 0 Then
+        Set filteredRows = New Collection
+        For Each rng In criteriaColumn
+            lastRow = Worksheets(rng.Parent.Name).Cells(Rows.Count, rng.Column).End(xlUp).row
+            For Each cell In rng
+                If cell.row > 1 Then
+                    filteredRows.Add cell.row
+                End If
+                If cell.row > lastRow Then
+                    GoTo line2
+                End If
+            Next cell
+line2:
+        Next rng
+    End If
+    
+    Set getFilteredRows = filteredRows
+    
+End Function
+
+Sub tester()
+Dim columns As Collection
+Dim criteria As Collection
+Set columns = New Collection
+Set criteria = New Collection
+columns.Add Range("B:B")
+columns.Add Range("C:C")
+criteria.Add Range("B2")
+criteria.Add Range("C3")
+
+Dim result As Collection
+Set result = getFilteredRows(columns, criteria)
+
+
+For Each item In result
+    Debug.Print item
+Next item
+End Sub
+
+Function ColumnLetterToNumber(ByVal columnLetter As String) As Long
+    Dim i As Long
+    Dim result As Long
+    Dim power As Long
+    Dim asciiValue As Long
+    Dim columnLength As Long
+    
+    columnLength = Len(columnLetter)
+    result = 0
+    
+    For i = columnLength To 1 Step -1
+        asciiValue = Asc(UCase(Mid(columnLetter, i, 1))) - 64 ' Convert letter to ASCII value
+        
+        If i = columnLength Then
+            result = asciiValue
+        Else
+            power = columnLength - i
+            result = result + (26 ^ power) * asciiValue
+        End If
+    Next i
+    
+    ColumnLetterToNumber = result
+End Function
+
+Function ExtractAlphabetLetters(ByVal inputString As String) As String
+    Dim regexPattern As String
+    Dim regexMatches As Object
+    Dim match As Object
+    Dim extractedLetters As String
+    
+    regexPattern = "[A-Za-z]"
+    
+    ' Create RegExp object and apply the pattern
+    Set regexMatches = CreateObject("VBScript.RegExp")
+    With regexMatches
+        .Global = True
+        .IgnoreCase = True
+        .Pattern = regexPattern
+    End With
+    
+    ' Get the matches
+    Set regexMatches = regexMatches.Execute(inputString)
+    
+    ' Concatenate the extracted letters
+    For Each match In regexMatches
+        extractedLetters = extractedLetters & match.Value
+    Next match
+    
+    ' Display the extracted letters
+    ExtractAlphabetLetters = extractedLetters
+End Function
+Function replaceStr(ByVal originalString As String, ByVal searchChar As String, ByVal replaceChar As String) As String
+    Dim resultString As String
+    Dim i As Long
+    
+    resultString = ""
+    
+    For i = 1 To Len(originalString)
+        If Mid(originalString, i, 1) = searchChar Then
+            resultString = resultString & replaceChar
+        Else
+            resultString = resultString & Mid(originalString, i, 1)
+        End If
+    Next i
+    
+    replaceStr = resultString
+End Function
+
+Function GetColumnDigit(ByVal cellName As String) As Long
+    Dim lastCharIndex As Integer
+    Dim columnName As String
+    cellName = replaceStr(cellName, "$", "")
+    ' Find the last index of the "!" character
+    lastCharIndex = InStr(cellName, "!")
+    If lastCharIndex > 0 Then
+    ' Extract the column name from the cell name
+        columnName = Mid(cellName, lastCharIndex + 1)
+        
+        
+        ' Return the column name
+        GetColumnDigit = ColumnLetterToNumber(ExtractAlphabetLetters(columnName))
+    Else
+        GetColumnDigit = 0
+    End If
+End Function
+
+Function GetColumnLetter(ByVal cellName As String) As String
+    Dim lastCharIndex As Integer
+    Dim columnName As String
+    cellName = replaceStr(cellName, "$", "")
+    ' Find the last index of the "!" character
+    lastCharIndex = InStr(cellName, "!")
+    
+    If lastCharIndex > 0 Then
+        ' Extract the column name from the cell name
+        columnName = Mid(cellName, lastCharIndex + 1)
+        
+        ' Return the column name
+        GetColumnLetter = ExtractAlphabetLetters(columnName)
+    Else
+        GetColumnLetter = ""
+    End If
+End Function
+
+Function GetSheetName(ByVal cellName As String) As String
+    Dim exclamationIndex As Integer
+    Dim equalIndex As Integer
+    Dim sheetName As String
+    
+    ' Find the index of the "!" character
+    exclamationIndex = InStr(cellName, "!")
+    Debug.Print "! index " & exclamationIndex
+    
+    ' Extract the sheet name from the cell name
+    If exclamationIndex > 0 Then
+        sheetName = Left(cellName, exclamationIndex - 1)
+        
+        equalIndex = InStr(sheetName, "=")
+        
+        sheetName = Mid(sheetName, equalIndex + 1)
+    Else:
+        sheetName = ""
+    End If
+    
+    ' Return the sheet name
+    GetSheetName = sheetName
+End Function
+
+Sub getReltationColumns(ByRef targetRange As Range, ByRef sourceRange As Range, ByRef filterColumns As Collection, ByRef criteriaCells As Collection, ByRef startIndex As Long)
+    
+    Dim relationSheetName As String
+    relationSheetName = "validation_setting"
+    Dim targetRefRange As Range
+    
+    Set targetRefRange = Range(relationSheetName & "!A:A")
+    Dim sourceRefColumn As String
+    sourceRefColumn = "B"
+    Dim row As Long
+    Dim sourceSheetName As String
+    Dim firstFilterColumnRefLetter As String
+    firstFilterColumnRefLetter = "C"
+    Dim filterRefRange As Range
+    
+    Dim lastRow As Long
+    lastRow = Worksheets(relationSheetName).Cells(Rows.Count, targetRefRange.Column).End(xlUp).row
+    Dim cell As Range
+    Dim rowIndex As Long
+    
+    For rowIndex = startIndex To lastRow + 1
+        Set cell = targetRefRange(rowIndex)
+        
+        If rowIndex > lastRow Then
+            startIndex = 0
+            GoTo line1
+        End If
+        
+        If Mid(cell.Formula, 1, 1) = "=" Then
+            
+            If GetColumnDigit(cell.Formula) = targetRange.Column And GetSheetName(cell.Formula) = targetRange.Parent.Name Then
+                row = cell.row
+                sourceColumnLetter = GetColumnLetter(Range(relationSheetName & "!" & sourceRefColumn & row).Formula)
+                sourceSheetName = GetSheetName(Range(relationSheetName & "!" & sourceRefColumn & row).Formula)
+                If sourceSheetName <> "" Then
+                    Set sourceRange = Range(sourceSheetName & "!" & sourceColumnLetter & ":" & sourceColumnLetter)
+                Else
+                    Set sourceRange = Range(relationSheetName & "!" & sourceRefColumn & row)
+                End If
+                
+                Set filterRefRange = Range(relationSheetName & "!" & firstFilterColumnRefLetter & row)
+                
+                While filterRefRange.Formula <> ""
+                    filterColumnLetter = GetColumnLetter(filterRefRange.Formula)
+                    filterSheetName = GetSheetName(filterRefRange.Formula)
+                    criteriaCells.Add Range(filterSheetName & "!" & filterColumnLetter & targetRange.row)
+                    Set filterRefRange = filterRefRange.Offset(0, 1)
+                    filterColumnLetter = GetColumnLetter(filterRefRange.Formula)
+                    filterSheetName = GetSheetName(filterRefRange.Formula)
+                    filterColumns.Add Range(filterSheetName & "!" & filterColumnLetter & ":" & filterColumnLetter)
+                    Set filterRefRange = filterRefRange.Offset(0, 1)
+                Wend
+                
+                startIndex = rowIndex + 1
+                GoTo line1
+            End If
+        
+        End If
+        
+    Next rowIndex
+line1:
+
+    If criteriaCells.Count = 0 And Not (sourceRange Is Nothing) Then
+        filterColumns.Add sourceRange
+    End If
+    
+    
+End Sub
+
+Sub CreateDropdownListFromCells(ByRef targetCell As Range, ByRef filteredCells As Collection)
+
+    Dim optionStr As String
+    
+    If filteredCells.Count > 0 Then
+        optionStr = ""
+        
+        For Each cell In filteredCells
+            optionStr = optionStr & cell.Value & ","
+        Next cell
+
+        optionStr = Left(optionStr, Len(optionStr) - 1)
+        
+        With targetCell.Validation
+            .Delete ' Clear any existing validation
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                Operator:=xlBetween, Formula1:=optionStr
+            .IgnoreBlank = True
+            .InCellDropdown = True
+        End With
+    
+    Else
+        optionStr = " ,"
+        With targetCell.Validation
+            .Delete ' Clear any existing validation
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                Operator:=xlBetween, Formula1:=optionStr
+            .IgnoreBlank = True
+            .InCellDropdown = True
+        End With
+    End If
+    
+    
+End Sub
+
+
+Sub CreateDropdownList(ByRef targetCell As Range, ByRef sourceRange As Range, ByRef filteredRows As Collection)
+    Dim rng As Range
+    Dim sourceColumn As Long
+    Dim ws As Worksheet
+    Dim sheetName As String
+    Dim sourceRow As Long
+    Dim filteredCell As Range
+    Dim optionStr As String
+    
+    If filteredRows.Count > 0 Then
+        sourceColumn = sourceRange.Column
+        sheetName = sourceRange.Parent.Name
+        optionStr = ""
+        Set ws = ThisWorkbook.Worksheets(sheetName)
+        For Each row In filteredRows
+            Set filteredCell = ws.Cells(row, sourceColumn)
+            optionStr = optionStr & filteredCell.Value & ","
+        Next row
+
+        optionStr = Left(optionStr, Len(optionStr) - 1)
+        
+        With targetCell.Validation
+            .Delete ' Clear any existing validation
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                Operator:=xlBetween, Formula1:=optionStr
+            .IgnoreBlank = True
+            .InCellDropdown = True
+        End With
+    End If
+    
+    If filteredRows.Count = 0 And Not (sourceRange Is Nothing) Then
+        sourceColumn = sourceRange.Column
+        sheetName = sourceRange.Parent.Name
+        optionStr = ""
+        Set ws = ThisWorkbook.Worksheets(sheetName)
+        lastRow = Worksheets(sheetName).Cells(Rows.Count, sourceColumn).End(xlUp).row
+        For row = 2 To lastRow
+            Set filteredCell = ws.Cells(row, sourceColumn)
+            optionStr = optionStr & filteredCell.Value & ","
+        Next row
+        optionStr = Left(optionStr, Len(optionStr) - 1)
+        With targetCell.Validation
+            .Delete ' Clear any existing validation
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                Operator:=xlBetween, Formula1:=optionStr
+            .IgnoreBlank = True
+            .InCellDropdown = True
+        End With
+    End If
+    
+End Sub
+
+Sub getFilteredCells(ByRef sourceRange As Range, ByRef filteredRows As Collection, ByRef filteredCells As Collection)
+    If Not (sourceRange Is Nothing) Then
+        Dim sheetName As String
+        sheetName = sourceRange.Parent.Name
+        Dim sourceColumn As Long
+        sourceColumn = sourceRange.Column
+        Dim ws As Worksheet
+        Set ws = ThisWorkbook.Worksheets(sheetName)
+        Dim currentCell As Range
+        
+        For Each sourceRow In filteredRows
+            Set currentCell = ws.Cells(sourceRow, sourceColumn)
+            If Not IsItemInCollection(currentCell, filteredCells) Then
+                filteredCells.Add currentCell
+            End If
+        Next sourceRow
+    End If
+    
+    If Not (sourceRange Is Nothing) And filteredRows Is Nothing Then
+        Debug.Print "use constant source"
+    End If
+        
+End Sub
+
+
+Sub Workbook_SheetSelectionChange(ByVal Sheet As Object, ByVal Target As Range)
+    
+    Dim filterColumns As Collection
+    Dim criteriaCells As Collection
+    Dim targetRange As Range
+    Set targetRange = Range(Sheet.Name & "!" & Target.Address)
+    Dim sourceRange As Range
+    
+    Dim filteredRows As Collection
+    With Target.Validation
+            .Delete ' Clear any existing validation
+    End With
+    
+    Dim startIndex As Long
+    Dim lastRow As Long
+    Dim filteredCells As Collection
+    Set filteredCells = New Collection
+    Dim toDropDown As Boolean
+    toDropDown = False
+    
+    startIndex = 2
+    
+    While startIndex <> 0
+        Set sourceRange = Nothing
+        Set filterColumns = New Collection
+        Set criteriaCells = New Collection
+        getReltationColumns targetRange, sourceRange, filterColumns, criteriaCells, startIndex
+        If Not (sourceRange Is Nothing) Then
+            toDropDown = True
+        End If
+        
+        For Each cell In criteriaCells
+            Debug.Print "criteria Cells " & cell.Address
+        Next cell
+        
+        For Each col In filterColumns
+            Debug.Print "filter column " & col.Address
+        Next col
+        
+        Set filteredRows = getFilteredRows(filterColumns, criteriaCells)
+        getFilteredCells sourceRange, filteredRows, filteredCells
+    Wend
+    
+    If toDropDown Then
+        CreateDropdownListFromCells targetRange, filteredCells
+    End If
+    
+End Sub
